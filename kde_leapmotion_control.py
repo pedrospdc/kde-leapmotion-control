@@ -7,18 +7,18 @@ from copy import copy
 
 import Leap
 
-workspace_cols = 2
-workspace_total = 4
+WORKSPACE_COLS = 2
+WORKSPACE_TOTAL = 4
+GESTURE_SLEEP = 1
 
 
 class LeapListener(Leap.Listener):
+    gestures_lock_time = 0
 
     def on_connect(self, controller):
         # Enable gestures
-        controller.enable_gesture(Leap.Gesture.TYPE_CIRCLE);
-        controller.enable_gesture(Leap.Gesture.TYPE_KEY_TAP);
-        controller.enable_gesture(Leap.Gesture.TYPE_SCREEN_TAP);
-        controller.enable_gesture(Leap.Gesture.TYPE_SWIPE);
+        controller.enable_gesture(Leap.Gesture.TYPE_CIRCLE)
+        controller.enable_gesture(Leap.Gesture.TYPE_SWIPE)
 
     def get_current_workspace(self):
         p1 = subprocess.Popen(['wmctrl', '-d'], stdout=subprocess.PIPE)
@@ -83,11 +83,21 @@ class LeapListener(Leap.Listener):
 
     def move_to_workspace(self, workspace_id):
         subprocess.call(['wmctrl', '-s', str(workspace_id)])
-        time.sleep(1)
 
     def lock_screen(self):
         subprocess.Popen(['qdbus', 'org.freedesktop.ScreenSaver', '/ScreenSaver', 'Lock'])
-        time.sleep(1)
+
+    def lock_gestures(self):
+        self.gestures_lock_time = time.time()
+
+    def check_gestures_timeout(self):
+        if self.gestures_lock_time:
+            now = time.time()
+            if now - self.gestures_lock_time >= 1:
+                self.gestures_lock_time = 0
+                return True
+            return False
+        return True
 
     def on_frame(self, controller):
         # Get the most recent frame and report some basic information
@@ -101,16 +111,23 @@ class LeapListener(Leap.Listener):
             fingers = hand.fingers
 
             # Gestures
-            for gesture in frame.gestures():
-                if gesture.type == Leap.Gesture.TYPE_SWIPE and len(fingers) in (4, 5):
-                    swipe = Leap.SwipeGesture(gesture)
-                    workspaces = self.generate_workspace_matrix(workspace_total, workspace_cols)
-                    current_position = self.get_position(workspaces, self.get_current_workspace())
-                    new_position = self.find_new_position(workspaces, current_position, swipe.direction)
-                    new_workspace = self.get_workspace_by_position(workspaces, new_position)
-                    self.move_to_workspace(new_workspace)
-                if gesture.type == Leap.Gesture.TYPE_CIRCLE:
-                    self.lock_screen()
+            gesture_found = False
+            if self.check_gestures_timeout():
+                for gesture in frame.gestures():
+                    if gesture.type == Leap.Gesture.TYPE_SWIPE and len(fingers) in (4, 5):
+                        swipe = Leap.SwipeGesture(gesture)
+                        workspaces = self.generate_workspace_matrix(WORKSPACE_TOTAL, WORKSPACE_COLS)
+                        current_position = self.get_position(workspaces, self.get_current_workspace())
+                        new_position = self.find_new_position(workspaces, current_position, swipe.direction)
+                        new_workspace = self.get_workspace_by_position(workspaces, new_position)
+                        self.move_to_workspace(new_workspace)
+                        gesture_found = True
+                    if gesture.type == Leap.Gesture.TYPE_CIRCLE and len(fingers) == 1:
+                        self.lock_screen()
+                        gesture_found = True
+
+            if gesture_found:
+                self.lock_gestures()
 
         if not (frame.hands.is_empty and frame.gestures().is_empty):
             pass
