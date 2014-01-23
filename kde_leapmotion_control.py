@@ -1,15 +1,18 @@
-from copy import copy
 import math
-from subprocess import Popen, PIPE
+import sys
+import subprocess
+import time
 
-import Leap, sys,subprocess, time
-from Leap import CircleGesture, KeyTapGesture, ScreenTapGesture, SwipeGesture
+from copy import copy
+
+import Leap
 
 workspace_cols = 2
 workspace_total = 4
 
 
-class SampleListener(Leap.Listener):
+class LeapListener(Leap.Listener):
+
     def on_connect(self, controller):
         # Enable gestures
         controller.enable_gesture(Leap.Gesture.TYPE_CIRCLE);
@@ -18,8 +21,8 @@ class SampleListener(Leap.Listener):
         controller.enable_gesture(Leap.Gesture.TYPE_SWIPE);
 
     def get_current_workspace(self):
-        p1 = Popen(['wmctrl', '-d'], stdout=PIPE)
-        p2 = Popen(['awk', "/\*/ {print $1}"], stdin=p1.stdout, stdout=PIPE)
+        p1 = subprocess.Popen(['wmctrl', '-d'], stdout=subprocess.PIPE)
+        p2 = subprocess.Popen(['awk', "/\*/ {print $1}"], stdin=p1.stdout, stdout=subprocess.PIPE)
         p1.stdout.close()
         return int(''.join([i for i in p2.communicate()[0] if i.isdigit()]))
 
@@ -100,7 +103,7 @@ class SampleListener(Leap.Listener):
             # Gestures
             for gesture in frame.gestures():
                 if gesture.type == Leap.Gesture.TYPE_SWIPE and len(fingers) in (4, 5):
-                    swipe = SwipeGesture(gesture)
+                    swipe = Leap.SwipeGesture(gesture)
                     workspaces = self.generate_workspace_matrix(workspace_total, workspace_cols)
                     current_position = self.get_position(workspaces, self.get_current_workspace())
                     new_position = self.find_new_position(workspaces, current_position, swipe.direction)
@@ -128,7 +131,7 @@ class SampleListener(Leap.Listener):
 
 def main():
     # Create a sample listener and controller
-    listener = SampleListener()
+    listener = LeapListener()
     controller = Leap.Controller()
 
     # Have the sample listener receive events from the controller

@@ -1,9 +1,9 @@
 import mock
 from unittest2.case import TestCase
-from kde_leapmotion_control import SampleListener
+from kde_leapmotion_control import LeapListener
 
 
-class WsTestCase(TestCase):
+class LeapListenerTestCase(TestCase):
     directions = {
         'up': (0, 1, 0),
         'down': (0, -1, 0),
@@ -15,9 +15,9 @@ class WsTestCase(TestCase):
                   [6, ]]
 
     def setUp(self):
-        self.s = SampleListener()
+        self.s = LeapListener()
 
-    @mock.patch('ws.SampleListener.get_current_workspace', return_value=1)
+    @mock.patch('kde_leapmotion_control.LeapListener.get_current_workspace', return_value=1)
     def test_get_workspace_position(self, mocked_get_current_workspace):
         pos = self.s.get_position(self.workspaces, 5)
         self.assertEqual(pos, [2, 1])
