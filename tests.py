@@ -1,5 +1,6 @@
 import mock
-from unittest2.case import TestCase
+
+from unittest.case import TestCase
 from kde_leapmotion_control import LeapListener
 
 
