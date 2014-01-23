@@ -9,4 +9,4 @@ Swipe for workspace switching, circle finger in order to lock your screen.
 
 Requirements
 ============
-Requires LeapMotion drivers and LeapMotion python sdk.
+Requires **LeapMotion drivers**, **LeapMotion python sdk** and **wmctrl**.
