@@ -1,6 +1,6 @@
 import mock
 from unittest2.case import TestCase
-from ws import SampleListener
+from kde_leapmotion_control import SampleListener
 
 
 class WsTestCase(TestCase):
