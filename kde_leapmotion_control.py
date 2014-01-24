@@ -95,7 +95,7 @@ class LeapListener(Leap.Listener):
                         self.backend.move_to_workspace(new_workspace)
                         gesture_found = True
 
-                    if gesture.type == Leap.Gesture.TYPE_CIRCLE and len(fingers) == 3:
+                    if gesture.type == Leap.Gesture.TYPE_CIRCLE and len(fingers) == 4:
                         self.backend.lock_screen()
                         gesture_found = True
 
