@@ -12,14 +12,22 @@ GESTURE_SLEEP = 1
 class LeapListener(Leap.Listener):
     gestures_lock_time = 0
     backend = None
+    fps = 10
+    frames = list()
+    prev_frames = list()
 
-    def on_init(self, *args):
+    def on_init(self, controller):
         self.backend = self.get_backend()()
+
+        for f in range(self.fps):
+            self.frames.append(controller.frame(f))
+            self.prev_frames.append(controller.frame(f + self.fps))
 
     def on_connect(self, controller):
         # Enable gestures
         controller.enable_gesture(Leap.Gesture.TYPE_CIRCLE)
         controller.enable_gesture(Leap.Gesture.TYPE_SWIPE)
+        controller.enable_gesture(Leap.Gesture.TYPE_KEY_TAP)
 
     def lock_gestures(self):
         self.gestures_lock_time = time.time()
@@ -40,9 +48,28 @@ class LeapListener(Leap.Listener):
         """
         return KdeBackend
 
+    def flush_buffer(self):
+        self.prev_frames[0:self.fps] = self.frames[0:self.fps]
+
+    def get_average_palm_position(self):
+        avg = [0, 0, 0]
+        valid_fps = 0
+        for frame in self.frames[(self.fps - 10):self.fps]:
+            if frame.hands[0].is_valid:
+                avg[0] += frame.hands[0].palm_position[0]
+                avg[1] += frame.hands[0].palm_position[1]
+                avg[2] += frame.hands[0].palm_position[2]
+                valid_fps += 1
+        return [x / valid_fps for x in avg]
+
     def on_frame(self, controller):
         # Get the most recent frame and report some basic information
         frame = controller.frame()
+
+        self.prev_frames.pop(0)
+        self.prev_frames.append(self.frames[0])
+        self.frames.pop(0)
+        self.frames.append(controller.frame())
 
         if not frame.hands.is_empty:
             # Get the first hand
@@ -50,6 +77,10 @@ class LeapListener(Leap.Listener):
 
             # Check if the hand has any fingers
             fingers = hand.fingers
+
+            if len(fingers) == 1:
+                pos = self.get_average_palm_position()
+                self.backend.process_pointer(pos)
 
             # Gestures
             gesture_found = False
@@ -63,10 +94,14 @@ class LeapListener(Leap.Listener):
                         new_workspace = self.backend.get_workspace_by_position(workspaces, new_position)
                         self.backend.move_to_workspace(new_workspace)
                         gesture_found = True
-                    if gesture.type == Leap.Gesture.TYPE_CIRCLE and len(fingers) == 1:
+
+                    if gesture.type == Leap.Gesture.TYPE_CIRCLE and len(fingers) == 3:
                         self.backend.lock_screen()
                         gesture_found = True
 
+                    if gesture.type == Leap.Gesture.TYPE_KEY_TAP and len(fingers) == 1:
+                        self.backend.click()
+                        self.flush_buffer()
             if gesture_found:
                 self.lock_gestures()
 

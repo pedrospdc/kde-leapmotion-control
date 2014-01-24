@@ -3,9 +3,15 @@ from copy import copy
 import subprocess
 import math
 
+from Xlib import X, display, ext, XK, display
+
 
 class Backend(object):
     __metaclass__ = ABCMeta
+
+    sensivity = 0.3
+    display_ = display.Display()
+    screen = display_.screen()
 
     def get_current_workspace(self):
         p1 = subprocess.Popen(['wmctrl', '-d'], stdout=subprocess.PIPE)
@@ -42,16 +48,16 @@ class Backend(object):
         Calculates new workspace position
         """
         move = 0, 0
-        if direction[0] > 0.5:
+        if direction[0] > self.sensivity:
             # move right
             move = 1, 0
-        elif direction[0] < -0.5:
+        elif direction[0] < -self.sensivity:
             # move left
             move = -1, 0
-        elif direction[1] > 0.5:
+        elif direction[1] > self.sensivity:
             # move up
             move = 0, -1
-        elif direction[1] < -0.5:
+        elif direction[1] < -self.sensivity:
             # move down
             move = 0, 1
 
@@ -83,3 +89,22 @@ class Backend(object):
     @abstractmethod
     def lock_screen(self):
         pass
+
+    def get_screen_size(self):
+        return [self.screen.width_in_pixels, self.screen.height_in_pixels]
+
+    def process_pointer(self, pos):
+        x = (pos[0] * (self.screen.width_in_pixels / 250)) + (self.screen.width_in_pixels / 2)
+        x = min(x, self.screen.width_in_pixels)
+        x = max(x, 0)
+        y = self.screen.height_in_pixels - (pos[1] * (self.screen.height_in_pixels / 250)) \
+            + (self.screen.height_in_pixels / 2)
+        y = min(y, self.screen.height_in_pixels)
+        y = max(y, 0)
+        self.screen.root.warp_pointer(x, y)
+        self.display_.flush()
+
+    def click(self):
+        ext.xtest.fake_input(self.display_, X.ButtonPress, 1)
+        ext.xtest.fake_input(self.display_, X.ButtonRelease, 1)
+        self.display_.flush()
