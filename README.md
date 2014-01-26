@@ -11,4 +11,4 @@ Swipe for workspace switching, circle 3 fingers in order to lock your screen, po
 
 Requirements
 ============
-Requires **LeapMotion drivers**, **LeapMotion python sdk** and **wmctrl**.
+Requires **LeapMotion drivers**, **LeapMotion python sdk**, **python-Xlib** and **wmctrl**.
