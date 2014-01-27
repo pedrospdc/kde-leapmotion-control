@@ -2,7 +2,9 @@ import sys
 import time
 
 import Leap
+from Leap import RAD_TO_DEG
 from backends.kde import KdeBackend
+from timer import Timer
 
 WORKSPACE_COLS = 2
 WORKSPACE_TOTAL = 4
@@ -15,9 +17,11 @@ class LeapListener(Leap.Listener):
     fps = 10
     frames = list()
     prev_frames = list()
+    active_modes = {'scroll': False}
 
     def on_init(self, controller):
         self.backend = self.get_backend()()
+        self.timer = Timer()
 
         for f in range(self.fps):
             self.frames.append(controller.frame(f))
@@ -70,10 +74,10 @@ class LeapListener(Leap.Listener):
         self.prev_frames.append(self.frames[0])
         self.frames.pop(0)
         self.frames.append(controller.frame())
-
         if not frame.hands.is_empty:
             # Get the first hand
             hand = frame.hands[0]
+            hand_direction = hand.direction
 
             # Check if the hand has any fingers
             fingers = hand.fingers
@@ -81,6 +85,18 @@ class LeapListener(Leap.Listener):
             if len(fingers) == 1:
                 pos = self.get_average_palm_position()
                 self.backend.process_pointer(pos)
+
+            if len(fingers) == 0 and (hand.direction.pitch * RAD_TO_DEG) > 45:
+                # Checks for scroll timer
+                if 'scroll' not in self.timer.timers:
+                    self.timer.start_timer('scroll')
+                elif self.timer.check_timer('scroll'):
+                    del self.timer.timers['scroll']
+                    # Toggles scroll mode
+                    self.active_modes['scroll'] = not self.active_modes['scroll']
+                    print "Toggle scroll mode to %s" % self.active_modes['scroll']
+            elif 'scroll' in self.timer.timers:
+                del self.timer.timers['scroll']
 
             # Gestures
             gesture_found = False
