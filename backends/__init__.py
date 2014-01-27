@@ -119,3 +119,33 @@ class Backend(object):
             ext.xtest.fake_input(self.display_, X.KeyPress, 117)
             ext.xtest.fake_input(self.display_, X.KeyRelease, 117)
         self.display_.flush()
+
+    def start_task_switcher(self):
+        ext.xtest.fake_input(self.display_, X.KeyPress, 64)
+        ext.xtest.fake_input(self.display_, X.KeyPress, 23)
+        ext.xtest.fake_input(self.display_, X.KeyRelease, 23)
+        self.display_.flush()
+
+    def release_task_switcher(self):
+        ext.xtest.fake_input(self.display_, X.KeyRelease, 64)
+        self.display_.flush()
+
+    def switch_task(self, frame, gesture):
+        the_hand = gesture.hands.frontmost
+        # guesses which hand made the gesture (left or right)
+        left_hand_gesture = False
+        for hand in frame.hands:
+            if hand != the_hand:
+
+                if hand.stabilized_palm_position[0] >= the_hand.stabilized_palm_position[0]:
+                    # gesture with left hand, shift is pressed
+                    ext.xtest.fake_input(self.display_, X.KeyPress, 50)
+                    left_hand_gesture = True
+
+                # tab is pressed anyway on both hands
+                ext.xtest.fake_input(self.display_, X.KeyPress, 23)
+                ext.xtest.fake_input(self.display_, X.KeyRelease, 23)
+
+                if left_hand_gesture:
+                    ext.xtest.fake_input(self.display_, X.KeyRelease, 50)
+        self.display_.flush()

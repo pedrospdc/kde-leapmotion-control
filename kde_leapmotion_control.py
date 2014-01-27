@@ -17,7 +17,7 @@ class LeapListener(Leap.Listener):
     fps = 10
     frames = list()
     prev_frames = list()
-    active_modes = {'scroll': False}
+    active_modes = {'scroll': False, 'task_switcher': False}
 
     def on_init(self, controller):
         self.backend = self.get_backend()()
@@ -75,62 +75,87 @@ class LeapListener(Leap.Listener):
         self.frames.pop(0)
         self.frames.append(controller.frame())
         if not frame.hands.is_empty:
-            # Get the first hand
-            hand = frame.hands[0]
+            if len(frame.hands) == 2:
+                def task_switcher_callback(obj):
+                    print "Activating task switcher"
+                    obj.active_modes['task_switcher'] = True
+                    obj.backend.start_task_switcher()
+                    obj.lock_gestures()
 
-            # Check if the hand has any fingers
-            fingers = hand.fingers
-            pitch = hand.direction.pitch * RAD_TO_DEG
+                if not self.active_modes['task_switcher']:
+                    self.timer.factory('task_switcher', task_switcher_callback, self)
 
-            if len(fingers) == 1:
-                pos = self.get_average_palm_position()
-                self.backend.process_pointer(pos)
+                if self.check_gestures_timeout():
+                    for gesture in frame.gestures():
+                        if gesture.type == Leap.Gesture.TYPE_SWIPE:
+                            swipe = Leap.SwipeGesture(gesture)
+                            self.backend.switch_task(frame, swipe)
+                            self.lock_gestures()
 
-            if len(fingers) == 0 and (pitch > 45 or self.active_modes['scroll']) :
-                # Checks for scroll timer
-                if 'scroll' not in self.timer.timers:
-                    self.timer.start_timer('scroll')
-                elif self.timer.check_timer('scroll'):
+            if len(frame.hands) <= 1 and self.active_modes['task_switcher']:
+                def deactivate_task_switcher_callback(obj):
+                    print "Deactivating task switcher"
+                    obj.active_modes['task_switcher'] = False
+                    obj.backend.release_task_switcher()
+                    obj.lock_gestures()
+                self.timer.factory('deactivate_task_switcher', deactivate_task_switcher_callback, self)
+
+            if len(frame.hands) == 1:
+                # Get the first hand
+                hand = frame.hands[0]
+
+                # Check if the hand has any fingers
+                fingers = hand.fingers
+                pitch = hand.direction.pitch * RAD_TO_DEG
+
+                if len(fingers) == 1:
+                    pos = self.get_average_palm_position()
+                    self.backend.process_pointer(pos)
+
+                if len(fingers) == 0 and (pitch > 45 or self.active_modes['scroll']):
+                    # Checks for scroll timer
+                    if 'scroll' not in self.timer.timers:
+                        self.timer.start_timer('scroll')
+                    elif self.timer.check_timer('scroll'):
+                        del self.timer.timers['scroll']
+                        # Toggles scroll mode
+                        self.active_modes['scroll'] = not self.active_modes['scroll']
+                        print "Toggle scroll mode to %s" % self.active_modes['scroll']
+                elif 'scroll' in self.timer.timers:
                     del self.timer.timers['scroll']
-                    # Toggles scroll mode
-                    self.active_modes['scroll'] = not self.active_modes['scroll']
-                    print "Toggle scroll mode to %s" % self.active_modes['scroll']
-            elif 'scroll' in self.timer.timers:
-                del self.timer.timers['scroll']
 
-            if self.active_modes['scroll'] and len(fingers) in (4, 5):
-                if self.timer.check_timer('scroll_sleep'):
-                    self.backend.scroll(pitch)
-                    del self.timer.timers['scroll_sleep']
-                if 'scroll_sleep' not in self.timer.timers:
-                    self.timer.start_timer('scroll_sleep')
+                if self.active_modes['scroll'] and len(fingers) in (4, 5):
+                    if self.timer.check_timer('scroll_sleep'):
+                        self.backend.scroll(pitch)
+                        del self.timer.timers['scroll_sleep']
+                    if 'scroll_sleep' not in self.timer.timers:
+                        self.timer.start_timer('scroll_sleep')
 
+                # Gestures
+                gesture_found = False
+                if self.check_gestures_timeout():
+                    for gesture in frame.gestures():
+                        if gesture.type == Leap.Gesture.TYPE_SWIPE and len(fingers) in (4, 5):
+                            swipe = Leap.SwipeGesture(gesture)
+                            workspaces = self.backend.generate_workspace_matrix(WORKSPACE_TOTAL, WORKSPACE_COLS)
+                            current_position = self.backend.get_position(workspaces, self.backend.get_current_workspace())
+                            new_position = self.backend.find_new_position(workspaces, current_position, swipe.direction)
+                            new_workspace = self.backend.get_workspace_by_position(workspaces, new_position)
+                            self.backend.move_to_workspace(new_workspace)
+                            gesture_found = True
 
-            # Gestures
-            gesture_found = False
-            if self.check_gestures_timeout():
-                for gesture in frame.gestures():
-                    if gesture.type == Leap.Gesture.TYPE_SWIPE and len(fingers) in (4, 5):
-                        swipe = Leap.SwipeGesture(gesture)
-                        workspaces = self.backend.generate_workspace_matrix(WORKSPACE_TOTAL, WORKSPACE_COLS)
-                        current_position = self.backend.get_position(workspaces, self.backend.get_current_workspace())
-                        new_position = self.backend.find_new_position(workspaces, current_position, swipe.direction)
-                        new_workspace = self.backend.get_workspace_by_position(workspaces, new_position)
-                        self.backend.move_to_workspace(new_workspace)
-                        gesture_found = True
+                        if gesture.type == Leap.Gesture.TYPE_CIRCLE and len(fingers) == 4:
+                            self.backend.lock_screen()
+                            gesture_found = True
 
-                    if gesture.type == Leap.Gesture.TYPE_CIRCLE and len(fingers) == 4:
-                        self.backend.lock_screen()
-                        gesture_found = True
+                        if gesture.type == Leap.Gesture.TYPE_KEY_TAP and len(fingers) == 1:
+                            self.backend.click()
+                            self.flush_buffer()
+                if gesture_found:
+                    self.lock_gestures()
 
-                    if gesture.type == Leap.Gesture.TYPE_KEY_TAP and len(fingers) == 1:
-                        self.backend.click()
-                        self.flush_buffer()
-            if gesture_found:
-                self.lock_gestures()
-
-        if not (frame.hands.is_empty and frame.gestures().is_empty):
-            pass
+            if not (frame.hands.is_empty and frame.gestures().is_empty):
+                pass
 
     def state_string(self, state):
         if state == Leap.Gesture.STATE_START:
