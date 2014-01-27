@@ -3,7 +3,8 @@ from time import time
 
 class Timer(object):
     configs = {
-        'scroll': 1.5
+        'scroll': 1.5,
+        'scroll_sleep': 0.8
     }
     timers = {}
 

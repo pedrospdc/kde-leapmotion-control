@@ -99,7 +99,12 @@ class LeapListener(Leap.Listener):
                 del self.timer.timers['scroll']
 
             if self.active_modes['scroll'] and len(fingers) != 1:
-                self.backend.scroll(pitch)
+                if self.timer.check_timer('scroll_sleep'):
+                    self.backend.scroll(pitch)
+                    del self.timer.timers['scroll_sleep']
+                if 'scroll_sleep' not in self.timer.timers:
+                    self.timer.start_timer('scroll_sleep')
+
 
             # Gestures
             gesture_found = False
