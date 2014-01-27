@@ -18,13 +18,17 @@ Shake 4 fingers circularly
 **Mouse**
 
 Point with one finger to move the mouse pointer
+
 Tap with one finger to click
 
 **Scroll**
 
 Scroll mode needs to be activated in order to use it.
+
 Hold your closed hand up for 1.5 seconds and the scroll mode will be activated.
+
 Pitch your open hand (4 or 5 fingers) down or up in order to scroll.
+
 Close your hand for 1.5 seconds to deactivate scroll mode.
 
 
