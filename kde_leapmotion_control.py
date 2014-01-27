@@ -77,7 +77,6 @@ class LeapListener(Leap.Listener):
         if not frame.hands.is_empty:
             # Get the first hand
             hand = frame.hands[0]
-            hand_direction = hand.direction
 
             # Check if the hand has any fingers
             fingers = hand.fingers
