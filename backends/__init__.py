@@ -119,4 +119,3 @@ class Backend(object):
             ext.xtest.fake_input(self.display_, X.KeyPress, 117)
             ext.xtest.fake_input(self.display_, X.KeyRelease, 117)
         self.display_.flush()
-        sleep(1)

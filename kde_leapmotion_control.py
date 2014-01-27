@@ -98,7 +98,7 @@ class LeapListener(Leap.Listener):
             elif 'scroll' in self.timer.timers:
                 del self.timer.timers['scroll']
 
-            if self.active_modes['scroll'] and len(fingers) != 1:
+            if self.active_modes['scroll'] and len(fingers) in (4, 5):
                 if self.timer.check_timer('scroll_sleep'):
                     self.backend.scroll(pitch)
                     del self.timer.timers['scroll_sleep']
