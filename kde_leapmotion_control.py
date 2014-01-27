@@ -80,12 +80,13 @@ class LeapListener(Leap.Listener):
 
             # Check if the hand has any fingers
             fingers = hand.fingers
+            pitch = hand.direction.pitch * RAD_TO_DEG
 
             if len(fingers) == 1:
                 pos = self.get_average_palm_position()
                 self.backend.process_pointer(pos)
 
-            if len(fingers) == 0 and (hand.direction.pitch * RAD_TO_DEG) > 45:
+            if len(fingers) == 0 and pitch > 45:
                 # Checks for scroll timer
                 if 'scroll' not in self.timer.timers:
                     self.timer.start_timer('scroll')
@@ -96,6 +97,9 @@ class LeapListener(Leap.Listener):
                     print "Toggle scroll mode to %s" % self.active_modes['scroll']
             elif 'scroll' in self.timer.timers:
                 del self.timer.timers['scroll']
+
+            if self.active_modes['scroll']:
+                self.backend.scroll(pitch)
 
             # Gestures
             gesture_found = False

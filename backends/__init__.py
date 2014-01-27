@@ -9,7 +9,8 @@ from Xlib import X, display, ext, XK, display
 class Backend(object):
     __metaclass__ = ABCMeta
 
-    sensivity = 0.3
+    mouse_sensivity = 0.3
+    scroll_sensivity = 25
     display_ = display.Display()
     screen = display_.screen()
 
@@ -48,16 +49,16 @@ class Backend(object):
         Calculates new workspace position
         """
         move = 0, 0
-        if direction[0] > self.sensivity:
+        if direction[0] > self.mouse_sensivity:
             # move right
             move = 1, 0
-        elif direction[0] < -self.sensivity:
+        elif direction[0] < -self.mouse_sensivity:
             # move left
             move = -1, 0
-        elif direction[1] > self.sensivity:
+        elif direction[1] > self.mouse_sensivity:
             # move up
             move = 0, -1
-        elif direction[1] < -self.sensivity:
+        elif direction[1] < -self.mouse_sensivity:
             # move down
             move = 0, 1
 
@@ -107,4 +108,14 @@ class Backend(object):
     def click(self):
         ext.xtest.fake_input(self.display_, X.ButtonPress, 1)
         ext.xtest.fake_input(self.display_, X.ButtonRelease, 1)
+        self.display_.flush()
+
+    def scroll(self, pitch):
+        if pitch >= self.scroll_sensivity:
+            ext.xtest.fake_input(self.display_, X.ButtonPress, 4)
+            ext.xtest.fake_input(self.display_, X.ButtonRelease, 4)
+        elif pitch <= -self.scroll_sensivity:
+            ext.xtest.fake_input(self.display_, X.ButtonPress, 5)
+            ext.xtest.fake_input(self.display_, X.ButtonRelease, 5)
+
         self.display_.flush()
