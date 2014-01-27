@@ -86,7 +86,7 @@ class LeapListener(Leap.Listener):
                 pos = self.get_average_palm_position()
                 self.backend.process_pointer(pos)
 
-            if len(fingers) == 0 and pitch > 45:
+            if len(fingers) == 0 and (pitch > 45 or self.active_modes['scroll']) :
                 # Checks for scroll timer
                 if 'scroll' not in self.timer.timers:
                     self.timer.start_timer('scroll')
@@ -98,7 +98,7 @@ class LeapListener(Leap.Listener):
             elif 'scroll' in self.timer.timers:
                 del self.timer.timers['scroll']
 
-            if self.active_modes['scroll']:
+            if self.active_modes['scroll'] and len(fingers) != 1:
                 self.backend.scroll(pitch)
 
             # Gestures

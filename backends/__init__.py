@@ -2,6 +2,7 @@ from abc import ABCMeta, abstractmethod
 from copy import copy
 import subprocess
 import math
+from time import sleep
 
 from Xlib import X, display, ext, XK, display
 
@@ -13,6 +14,8 @@ class Backend(object):
     scroll_sensivity = 25
     display_ = display.Display()
     screen = display_.screen()
+    active_keys = {'scroll_down': False,
+                   'scroll_up': False}
 
     def get_current_workspace(self):
         p1 = subprocess.Popen(['wmctrl', '-d'], stdout=subprocess.PIPE)
@@ -113,9 +116,16 @@ class Backend(object):
     def scroll(self, pitch):
         if pitch >= self.scroll_sensivity:
             ext.xtest.fake_input(self.display_, X.ButtonPress, 4)
-            ext.xtest.fake_input(self.display_, X.ButtonRelease, 4)
+            self.active_keys['scroll_up'] = True
         elif pitch <= -self.scroll_sensivity:
             ext.xtest.fake_input(self.display_, X.ButtonPress, 5)
+            self.active_keys['scroll_down'] = True
+        elif pitch <= self.scroll_sensivity and self.active_keys['scroll_up']:
+            ext.xtest.fake_input(self.display_, X.ButtonRelease, 4)
+            self.active_keys['scroll_up'] = False
+        elif pitch >= -self.scroll_sensivity and self.active_keys['scroll_down']:
             ext.xtest.fake_input(self.display_, X.ButtonRelease, 5)
+            self.active_keys['scroll_down'] = False
 
         self.display_.flush()
+        sleep(0.2)
