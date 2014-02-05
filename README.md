@@ -1,7 +1,7 @@
 kde-leapmotion-control
 ======================
 
-Simple script to control KDE environment with Leapmotion.
+Allows you to control KDE environment with Leapmotion.
 
 You can check a demonstration of it at: https://www.youtube.com/watch?v=aXnqEHcZc_8
 
